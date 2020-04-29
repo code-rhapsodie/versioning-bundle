@@ -11,6 +11,8 @@
             <argument type="service" id="shivas_versioning.cache.version"/>
             <argument type="service" id="Shivas\VersioningBundle\Writer\WriterInterface"/>
             <argument type="service" id="Shivas\VersioningBundle\Formatter\FormatterInterface"/>
+            <argument type="service" id="logger" on-invalid="null"/>
+            <argument>%kernel.debug%</argument>
         </service>
 
         <service id="Shivas\VersioningBundle\Formatter\FormatterInterface" alias="shivas_versioning.formatter.git"/>

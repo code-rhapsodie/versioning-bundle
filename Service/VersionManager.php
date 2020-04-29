@@ -3,6 +3,7 @@
 namespace Shivas\VersioningBundle\Service;
 
 use Psr\Cache\InvalidArgumentException;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Shivas\VersioningBundle\Formatter\FormatterInterface;
 use Shivas\VersioningBundle\Provider\ProviderInterface;
@@ -42,17 +43,37 @@ class VersionManager
     private $providers = [];
 
     /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+    /**
+     * @var bool
+     */
+    private $debug = false;
+
+    /**
      * Constructor
      *
      * @param AdapterInterface        $cache
      * @param WriterInterface         $writer
      * @param FormatterInterface|null $formatter
      */
-    public function __construct(AdapterInterface $cache, WriterInterface $writer, FormatterInterface $formatter = null)
+    public function __construct(AdapterInterface $cache, WriterInterface $writer, FormatterInterface $formatter = null, LoggerInterface $logger = null, bool $debug = false)
     {
         $this->cache = $cache;
         $this->writer = $writer;
         $this->formatter = $formatter;
+        $this->logger = $logger;
+        $this->debug = $debug;
+    }
+
+    /**
+     * @param bool $debug
+     */
+    public function setDebug(bool $debug): void
+    {
+        $this->debug = $debug;
     }
 
     /**
@@ -145,7 +166,7 @@ class VersionManager
     public function getVersion()
     {
         $cacheItem = $this->cache->getItem('version');
-        if ($cacheItem->isHit()) {
+        if (!$this->debug && $cacheItem->isHit()) {
             return $cacheItem->get();
         } else {
             $version = $this->getVersionFromProvider();
@@ -179,7 +200,14 @@ class VersionManager
 
             return $version;
         } catch (InvalidVersionStringException $e) {
-            throw new RuntimeException(get_class($provider) . ' returned an invalid version');
+            $msg = sprintf('%s returned an invalid version \'%s\'', get_class($provider), $versionString);
+            if ($this->debug) {
+                throw new RuntimeException($msg);
+            } elseif ($this->logger) {
+                $this->logger->warning($msg);
+            }
+
+            return '';
         }
     }
 
